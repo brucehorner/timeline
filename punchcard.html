@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #eee;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+  font-family: sans-serif;
+  font-size: 11px;
+}
+
+.loading {
+  font-family: sans-serif;
+  font-size: 15px;
+}
+
+.circle {
+  fill: #222;
+}
+</style>
+
+<div id="punchcard"></div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+var w = 740,
+  h = 150,
+  pad = 20,
+  left_pad = 100,
+  Data_url = './punch.json';
+
+var svg = d3.select("#punchcard")
+  .append("svg")
+  .attr("width", w)
+  .attr("height", h);
+
+// 24 hours in a day
+// 7 days in a week
+var x = d3.scaleLinear().domain([0, 23]).range([left_pad, w-pad]),
+    y = d3.scaleLinear().domain([0, 6]).range([pad, h-pad*2]);
+
+// start at midnight
+// start on Monday 
+var xAxis = d3.axisBottom(x)
+    .ticks(24)
+    .tickFormat(function (d) {
+      var m = (d > 12) ? "p" : "a";
+      return (d % 12 == 0) ? 12 + m :  d % 12 + m;
+      }), // tickFormat
+    yAxis = d3.axisLeft(y)
+      .ticks(7)
+      .tickFormat(function (d, i) {
+        return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][d];
+      }); // tickFormat
+
+svg.append("g")
+  .attr("class", "axis")
+  .attr("transform", "translate(0, " + (h - pad) + ")")
+  .call(xAxis);
+
+svg.append("g")
+  .attr("class", "axis")
+  .attr("transform", "translate(" + (left_pad - pad) + ", 0)")
+  .call(yAxis);
+
+// put a splash on the page as the data is loaded 
+svg.append("text")
+  .attr("class", "loading")
+  .text("Loading ...")
+  .attr("x", function () { return w / 2; })
+  .attr("y", function () { return h / 2 - 5; });
+
+d3.json(Data_url, function (punchcard_data) {
+  var r = d3.scaleLinear()
+    .domain([0, d3.max(punchcard_data, function (d) { return d[2]; })])
+    .range([0, 12]);
+          
+  // drop the splash
+  svg.selectAll(".loading").remove();
+
+  // add the data as circles
+  svg.selectAll("circle")
+    .data(punchcard_data)
+    .enter()
+    .append("circle")
+    .attr("class", "circle")
+    .attr("cx", function (d) { return x(d[1]); })
+    .attr("cy", function (d) { return y(d[0]); })
+  //  .transition().duration(400)
+    .attr("r", function (d) { return r(d[2]); });
+}); // d3.json
+
+</script>
