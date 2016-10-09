@@ -34,4 +34,7 @@ There are some alternative renderings which may improve this visualization:
 * introduce brush/zoom facility to allow closer inspection high event density
 
 ### Scatter
+![sample](scatter-sample.png "Scattersample image")
+
+Each event group is assigned its own horizontal row to separate the circles. Depending on the exact timeline there is potential for the circles respresenting the events to overlap.
 

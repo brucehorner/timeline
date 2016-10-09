@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.cells path {
+  fill: none;
+  pointer-events: all;
+}
+
+.cells :hover circle {
+  fill: red;
+}
+</style>
+<svg width="700" height="150"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+function calcRadius(node) {
+  if (node && node.type) {
+    return node.type == 'MID' ? 3 : 4;
+  }
+  return 3;
+}
+
+var svg = d3.select("svg"),
+  margin = {top: 20, right: 40, bottom: 40, left: 40},
+  width = svg.attr("width") - margin.left - margin.right,
+  height = svg.attr("height") - margin.top - margin.bottom,
+  pad = 5;
+
+var scale = d3.scaleLinear().rangeRound([0, width]),
+   yScale = d3.scaleLinear().rangeRound([0, height - pad]);
+
+var g = svg.append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.json("data.json", function(data) {
+  scale.domain(d3.extent(data.activities, function(d) { return d.created; }));
+  yScale.domain(d3.extent(data.activities, function(d) { return d.familyId; }));  
+
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(scale).ticks(10).tickFormat(function(d,i){
+      return d3.timeFormat("%b %d")(new Date(d));
+    }));
+
+  var cell = g.append("g")
+    .attr("class", "cells")
+    .selectAll("g")
+    .data(data.activities)
+    .enter().append("g");
+
+  cell.append("circle")
+    .attr("r",  function(d) { return calcRadius(d); })
+    .attr("cx", function(d) { return scale(d.created); })
+    .attr("cy", function(d) { return yScale(d.familyId); });
+
+// this is the make the hover tooltip show up over larger area than just the circle
+  //cell.append("path")
+  //  .attr("d", function(d) { return "M" + d.join("L") + "Z"; });
+
+  cell.append("title")
+    .text(function(d) {
+      return d.id + "\n" +
+      d.familyId + "\n" +
+      d.type + "\n" +
+      new Date(d.created); });
+});
+</script>
