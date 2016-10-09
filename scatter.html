@@ -4,12 +4,13 @@
 .axis path,
 .axis line {
   fill: none;
-  stroke: #000;
+  stroke: #eee;
   shape-rendering: crispEdges;
 }
 
 .axis text {
   font: 10px sans-serif;
+  color: #eee;
 }
 
 .cells path {
@@ -20,22 +21,21 @@
 .cells :hover circle {
   fill: red;
 }
+
+.cells-start :hover path, .cells-end :hover path {
+  fill: red;
+}
+
 </style>
 <svg width="700" height="150"></svg>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
-function calcRadius(node) {
-  if (node && node.type) {
-    return node.type == 'MID' ? 3 : 4;
-  }
-  return 3;
-}
-
 var svg = d3.select("svg"),
-  margin = {top: 20, right: 40, bottom: 40, left: 40},
+  margin = {top: 5, right: 40, bottom: 40, left: 5},
   width = svg.attr("width") - margin.left - margin.right,
   height = svg.attr("height") - margin.top - margin.bottom,
+  radius = 3,
   pad = 5;
 
 var scale = d3.scaleLinear().rangeRound([0, width]),
@@ -55,26 +55,59 @@ d3.json("data.json", function(data) {
       return d3.timeFormat("%b %d")(new Date(d));
     }));
 
+// first build up non-terminal events in the group with the
+// visualization as a circle
   var cell = g.append("g")
     .attr("class", "cells")
     .selectAll("g")
-    .data(data.activities)
-    .enter().append("g");
+    .data(data.activities.filter(function(d) { return d.type == 'MID'; }))
+    .enter().append("g")
+      .append("circle")
+        .attr("r",  radius)
+        .attr("cx", function(d) { return scale(d.created); })
+        .attr("cy", function(d) { return yScale(d.familyId); });
+    
+ var arcEnd = d3.arc().innerRadius(0).outerRadius(radius)
+    .startAngle(0)
+    .endAngle(Math.PI);
 
-  cell.append("circle")
-    .attr("r",  function(d) { return calcRadius(d); })
-    .attr("cx", function(d) { return scale(d.created); })
-    .attr("cy", function(d) { return yScale(d.familyId); });
+ var arcStart = d3.arc().innerRadius(0).outerRadius(radius)
+    .startAngle(0)
+    .endAngle(-Math.PI);   
+
+// now deal with START events, rendered as left semi-circle
+    var start = g.append("g")
+    .attr("class", "cells-start")
+    .selectAll("g")
+    .data(data.activities.filter(function(d) { return d.type == 'START'; }))
+    .enter().append("g")
+      .append("path")
+        .attr("d", arcStart)
+        .attr("transform", function(d) { return "translate("+scale(d.created)+","+yScale(d.familyId)+")"; });
+    
+// and finally with END events, as the right side of a circle
+    var end = g.append("g")
+    .attr("class", "cells-end")
+    .selectAll("g")
+    .data(data.activities.filter(function(d) { return d.type == 'END'; }))
+    .enter().append("g")
+      .append("path")
+        .attr("d", arcEnd)
+        .attr("transform", function(d) { return "translate("+scale(d.created)+","+yScale(d.familyId)+")"; });
 
 // this is the make the hover tooltip show up over larger area than just the circle
   //cell.append("path")
   //  .attr("d", function(d) { return "M" + d.join("L") + "Z"; });
 
-  cell.append("title")
-    .text(function(d) {
-      return d.id + "\n" +
-      d.familyId + "\n" +
-      d.type + "\n" +
-      new Date(d.created); });
+  var components = [ cell, start, end ];
+  components.forEach(function(c){
+    c.append("title")
+      .text(function(d) {
+        return d.id + "\n" +
+        d.familyId + "\n" +
+        d.type + "\n" +
+        new Date(d.created);
+    });
+  });
 });
 </script>
