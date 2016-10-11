@@ -27,7 +27,7 @@
 }
 
 </style>
-<svg width="700" height="150"></svg>
+<svg width="700" height="120"></svg>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
@@ -37,12 +37,23 @@ var svg = d3.select("svg"),
   height = svg.attr("height") - margin.top - margin.bottom,
   radius = 3,
   pad = 5;
-
+  
+var displayHeight = (radius * 2 + pad);
+var maxDisplayRows = (height - pad) / displayHeight;
 var scale = d3.scaleLinear().rangeRound([0, width]),
    yScale = d3.scaleLinear().rangeRound([0, height - pad]);
 
 var g = svg.append("g")
   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  function calcY (d) {
+    var y = yScale(d.familyId);
+    var row = y / yScale(1);
+    var rollingRow = Math.floor(row % maxDisplayRows);
+    var newY = rollingRow * displayHeight;
+//    console.log('y=' + y + ', row=' + row + ', rollingRow=' + rollingRow + ', newY=' + newY); 
+    return newY;
+  }
 
 d3.json("data.json", function(data) {
   scale.domain(d3.extent(data.activities, function(d) { return d.created; }));
@@ -65,7 +76,9 @@ d3.json("data.json", function(data) {
       .append("circle")
         .attr("r",  radius)
         .attr("cx", function(d) { return scale(d.created); })
-        .attr("cy", function(d) { return yScale(d.familyId); });
+        .attr("cy", function(d) {
+          return calcY(d);
+        });
     
  var arcEnd = d3.arc().innerRadius(0).outerRadius(radius)
     .startAngle(0)
@@ -83,7 +96,7 @@ d3.json("data.json", function(data) {
     .enter().append("g")
       .append("path")
         .attr("d", arcStart)
-        .attr("transform", function(d) { return "translate("+scale(d.created)+","+yScale(d.familyId)+")"; });
+        .attr("transform", function(d) { return "translate("+scale(d.created)+","+calcY(d)+")"; });
     
 // and finally with END events, as the right side of a circle
     var end = g.append("g")
@@ -93,11 +106,7 @@ d3.json("data.json", function(data) {
     .enter().append("g")
       .append("path")
         .attr("d", arcEnd)
-        .attr("transform", function(d) { return "translate("+scale(d.created)+","+yScale(d.familyId)+")"; });
-
-// this is the make the hover tooltip show up over larger area than just the circle
-  //cell.append("path")
-  //  .attr("d", function(d) { return "M" + d.join("L") + "Z"; });
+        .attr("transform", function(d) { return "translate("+scale(d.created)+","+calcY(d)+")"; });
 
   var components = [ cell, start, end ];
   components.forEach(function(c){
