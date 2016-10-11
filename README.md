@@ -43,5 +43,5 @@ Each event group is assigned its own horizontal row to separate the circles. Dep
 
 First revision is to change the icons for start and end events in a group.  To reduce risk of collision, rotate 'later' event groups to 'higher' rows. 
 
-![scatter-stacked][scatter-stacked.png "Scatter stacked sample image")
+![scatter-stacked](scatter-stacked.png "Scatter stacked sample image")
 
