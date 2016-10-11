@@ -22,6 +22,7 @@ The sample data is expressed as JSON with a single element called `activities`. 
 Use Node.js to run the gen-data.js script to generate a JSON file of data we can use to explore the visualizations.  Some sample data files are in this project.  
 
 ### Beeswarm
+------------
 ![sample](beeswarm-sample.png "Beeswarm sample image")
 
 Based on Mike Rostock's [original Beeswarm] (http://bl.ocks.org/mbostock/6526445e2b44303eebf21da3b6627320 "original Beeswarm") dated July 4, 2016.  This visualization retains the use of force layout but changes to a timeline axis, uses color for groups and changes the circle radius for the terminal events in a group. Now the circles use a fill color, the hover highlight changed from fill to stroke.  The circle outline change to red is more subtle than in Mike's original.
@@ -35,7 +36,12 @@ There are some alternative renderings which may improve this visualization:
 * introduce brush/zoom facility to allow closer inspection high event density
 
 ### Scatter
-![sample](scatter-sample.png "Scattersample image")
+-----------
+![sample](scatter-sample.png "Scatter sample image")
 
 Each event group is assigned its own horizontal row to separate the circles. Depending on the exact timeline there is potential for the circles respresenting the events to overlap.
+
+First revision is to change the icons for start and end events in a group.  To reduce risk of collision, rotate 'later' event groups to 'higher' rows. 
+
+![scatter-stacked][scatter-stacked.png "Scatter stacked sample image")
 
