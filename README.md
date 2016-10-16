@@ -45,3 +45,19 @@ First revision is to change the icons for start and end events in a group.  To r
 
 ![scatter-stacked](scatter-stacked.png "Scatter stacked sample image")
 
+### Activity
+-----------
+![sample](activity-sample.png "Activity sample image")
+Inspired by github's own annual activity table on the the profile page and Swizec Teller's work at https://swizec.com/blog/quick-scatterplot-tutorial-for-d3-js/swizec/5337.  This is a compact way to review activity over a year of data. A legend is included for the color scale and mouse event interactity which dims all activity tiles which have different value to that represented by the legend value under the mouse.
+
+Lots of To Do items here.  This is fairly fragile and more of a work in progress than the other samples on this page.
+
+### Sample data generation
+Use Node.js to run gen-activity-data.js which will generate a JSON file of data for activity counts.  One sample of a generated file is included `activity.json`. Structure of this file is:
+
+* `user`: Name of the user who generated this activity count
+* `activities`: An array of objects with the following structure:
+  * `when`: timestamp as milliseconds since epoch start
+  * `size`: integer for the number of activities
+
+

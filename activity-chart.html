@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head>
+<style>
+
+/* body { background-color: BlanchedAlmond; } */
+
+.gridlines line {
+  fill: none;
+  stroke: #ccc;
+  shape-rendering: crispEdges;
+}
+
+.axis line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+#legend text {
+  font: 10px sans-serif;  
+}
+
+.tick line {
+  opacity: 0;
+}
+
+path.domain {
+  opacity: 0;
+}   
+}
+</style>
+
+<svg width="700" height="150"></svg>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+
+<script>
+
+Date.prototype.getWeek = function (dowOffset) {
+/*getWeek() was developed by Nick Baicoianu at MeanFreePath: http://www.epoch-calendar.com */
+
+	dowOffset = typeof(dowOffset) == 'int' ? dowOffset : 0; //default dowOffset to zero
+	var newYear = new Date(this.getFullYear(),0,1);
+	var day = newYear.getDay() - dowOffset; //the day of week the year begins on
+	day = (day >= 0 ? day : day + 7);
+	var daynum = Math.floor((this.getTime() - newYear.getTime() - 
+	(this.getTimezoneOffset()-newYear.getTimezoneOffset())*60000)/86400000) + 1;
+	var weeknum;
+	//if the year starts before the middle of a week
+	if(day < 4) {
+		weeknum = Math.floor((daynum+day-1)/7) + 1;
+		if(weeknum > 52) {
+			nYear = new Date(this.getFullYear() + 1,0,1);
+			nday = nYear.getDay() - dowOffset;
+			nday = nday >= 0 ? nday : nday + 7;
+			/*if the next year starts before the middle of
+ 			  the week, it is week #1 of that year*/
+			weeknum = nday < 4 ? 1 : 53;
+		}
+	}
+	else {
+		weeknum = Math.floor((daynum+day-1)/7);
+	}
+	return weeknum;
+};
+
+var svg = d3.select("svg"),
+  margin = {top: 20, right: 0, bottom: 30, left: 10},
+  width = svg.attr("width") - margin.left - margin.right,
+  height = svg.attr("height") - margin.top - margin.bottom,
+  pad = 10,
+  leftPad = pad * 5;
+
+d3.json("activity.json", function(data) {
+  const minDateMs = data.activities.reduce(function(x, d) {
+    return Math.min(x, d.when);
+  }, Date.now());
+  const minDate = new Date(minDateMs);
+  const minDateWeek = minDate.getWeek();
+  const minDateYear = minDate.getFullYear();
+  
+  var sizeExtent = d3.extent(data.activities, function(d) { return d.size; });
+  var color = d3.scaleLinear().domain(sizeExtent).range(["white", "green"]);
+
+  var dateExtent = d3.extent(data.activities, function(d){ return d.when; });
+  console.log(dateExtent);
+
+// 52 weeks in a year - though this approach causes a lot of messing around it does make the gridlines easier.  Plus, the horizontal axis should cover 52 weeks, but the data set may not.
+// 7 days in a week
+var x = d3.scaleLinear().domain([0, 51]).range([leftPad, width - pad]),
+  y = d3.scaleLinear().domain([0, 6]).range([pad, height - pad*2]);
+    
+var tilesize = Math.min(x(1) - x(0) - 2, y(1) - y(0) - 2);   
+var msPerWeek = 1000 * 60 * 60 * 24 * 7;
+
+  function getWeek(d) {
+    const when = new Date(d.when);  
+    const normalizedWeek = when.getWeek() - minDateWeek - (when.getFullYear() - minDateYear);
+    const w = normalizedWeek < 0 ? 52 + normalizedWeek : normalizedWeek;
+    return w;
+  }    
+
+  function getWeekday(d) {
+    const when = new Date(d.when);
+    const weekday = when.getDay();
+    return weekday;
+  }
+  
+  var timeFormat = d3.timeFormat("%d %b");
+    
+var xAxis = d3.axisBottom(x)
+    .ticks(12)
+  .tickFormat(function (d) {
+      var when = new Date(minDateMs + (d * msPerWeek));
+      return timeFormat(when);
+    }), // tickFormat
+    yAxis = d3.axisLeft(y)
+      .ticks(7)
+      .tickFormat(function (d, i) {
+        return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d];
+      }); // tickFormat
+
+svg.append("g")
+  .attr("class", "axis")
+  .attr("transform", "translate(0, " + (height - 2*pad) + ")")
+  .call(xAxis);
+
+svg.append("g")
+  .attr("class", "axis")
+  .attr("transform", "translate(" + (leftPad) + ", 0)")
+  .call(yAxis);
+
+  var datagrid = svg.append("svg")
+    .attr("class", "datagrid")
+    ;
+
+// jam in the gridlines.  would love to have done this with
+// css gridline background but couldn't make that visible for the datagrid
+    var gridlines = datagrid.append("g").attr("class", "gridlines");
+    
+    for (var day = 1; day < 7; day++) {
+      var yval = Math.floor(y(day) - 1 - tilesize / 2);
+      gridlines.append("line")
+      .attr("x1", x(0) - tilesize / 2)
+      .attr("x2", x(51) + tilesize / 2)
+      .attr("y1", yval)
+      .attr("y2", yval)
+      ;
+    }
+    
+    for (var week = 1; week < 52; week++) {
+      var xval = Math.floor(x(week) - tilesize / 2);
+      gridlines.append("line")
+      .attr("x1", xval)
+      .attr("x2", xval)
+      .attr("y1", y(0) - tilesize / 2)
+      .attr("y2", y(6) + tilesize / 2)
+      ;
+    }
+    
+// place legend, which has a fixed width, and an array with
+// elements for each of the possible sizes in the activities
+// simple interactive dimming of non selected tiles on mouseover
+    var legendValues = [];
+    for (var i = sizeExtent[0]; i <= sizeExtent[1]; i++)
+      legendValues.push(i);
+    var legendWidth = width / 2,
+    legendTileWidth = legendWidth / legendValues.length;
+    var legendXscale = d3.scaleLinear().domain(sizeExtent).range([pad, legendWidth]);
+    
+    function legend(selection) { 
+      selection.selectAll("rect")
+      .data(legendValues)
+      .enter().append("rect")
+      .attr("class", "legend-tile")
+      .attr("height", tilesize)
+      .attr("width", legendTileWidth)
+      .attr("x", function(d,i) { return legendXscale(d); })
+      .style("fill", function(d) { return color(d); })
+      .on("mouseover", function(d) {
+        d3.selectAll("rect.activity-tile")
+        .style("opacity", function(t){
+          if (t.size == d) {
+            return 1;
+          } else {
+            return 0.25;
+          } // match size
+        }); // opacity style
+      })  // mouseover
+      .on("mouseout", function(d) {
+        d3.selectAll("rect.activity-tile")
+        .style("opacity", 1);
+      }) // mouseout
+      ;
+      
+      selection.selectAll("text")
+      .data(legendValues)
+      .enter().append("g")
+      .attr("transform", function(d){
+        return "translate("+(legendXscale(d)+legendTileWidth/2)+","+(pad+10)+")";
+      }) // transform
+      .append("text")
+      .text(function(d){ return d;})
+      ;
+      return this;
+    }  
+
+  svg.append("g")
+    .attr("id", "legend")
+    .attr("transform", "translate("+(width/4 - leftPad)+","+(height + pad)+")")
+    .call(legend);
+
+  // now add cells for the real data
+  var cell = datagrid.append("g")
+    .attr("class", "cells")
+    .selectAll("g")
+    .data(data.activities).enter()
+    .append("g");
+
+  cell.append("rect")
+    .attr("class", "activity-tile")
+    .style("fill", function(d) { return color(d.size); })
+    .attr("width", tilesize)
+    .attr("height", tilesize)
+    .attr("x", function(d) { return x(getWeek(d)) - tilesize/2; })
+    .attr("y", function(d) { return y(getWeekday(d)) - tilesize/2; });
+
+
+  cell.append("title")
+    .text(function(d) {
+      return new Date(d.when) + "\n" + "size: " + d.size; });
+
+});
+</script>
+</head>
+</html>
